@@ -89,12 +89,22 @@ class Hyprfloat:
 			height = monitors[active_monitor]['height']
 			offset = monitors[active_monitor]['offset']
 			address = window['address']
+
 			# If the window is not floating, float it.
 			if not window['floating']:
+				# hyprctl(['dispatch', 'setfloating', f'address:{window['address']}']) Deprecated Call
+
 				hyprctl(['dispatch', f'hl.dsp.window.float{{action = "enable", window = "address:{address}"}}'])
 
 				# 'hl.dsp.window.float{ action = "enable", window = "address:0x559896e6cd30" }'
 				# hl.dsp.window.float({ action = "toggle" }))
+
+			# Deprecated Calls
+			"""	hyprctl(['dispatch', 'resizewindowpixel', 'exact', str(width), str(height), f',address:{window['address']}'])
+				hyprctl(['dispatch', 'centerwindow', f',address:{window['address']}'])
+				hyprctl(['dispatch', 'movewindowpixel', str(offset[0]), str(offset[1]), f',address:{window['address']}'])
+			"""
+
 
 			# Resize the window
 			hyprctl(['dispatch', f'hl.dsp.window.resize({{x = {width}, y= {height}, window = "address:{address}"}})'])
