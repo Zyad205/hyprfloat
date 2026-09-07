@@ -408,7 +408,6 @@ class Hyprfloat:
 
     def iterate_events(self, events):
         for event in events:
-            print(self.user_tiled_windows)
             self.custom_handler(event)
 
 def main():
