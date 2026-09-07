@@ -21,7 +21,6 @@ IMPORTANT_EVENTS = [
     ]
 
 
-
 def event_parser(events):
     """It gives a list of events turned into list for each one made
     of ['Event Name', its other return values either one or two]
@@ -58,18 +57,12 @@ def format_window(window, width: int = 1050, height:int= 630, offset: tuple(int)
     hyprctl(['dispatch', f'hl.dsp.window.move({{x= {offset[0]}, y = {offset[1]}, window = "address:{address}}})'])
     # hl.dsp.window.move({ x, y, relative?, window? })
 
-def make_windows_normal(windows):
-    for window in windows:
-        address = window['address']
-        if window['floating']:
-            hyprctl(['dispatch', f'hl.dsp.window.float{{action = "disable", window = "address:{address}"}}'])
-
 
 def query_workspace(id):
     clients = hyprctl(['clients'])
     active_clients_list = []
 
-    # Exits if there is now windows
+    # Exits if there is no windows
     if not clients: return
 
     for client in clients:
@@ -90,13 +83,30 @@ class Hyprfloat:
         '''Initialize the database and the list of windows to ignore.'''
         self.db = DbHelper()
         self.address_to_ignore = []
+        # self.user_tiled_windows = {
+        #     1: [],
+        #     2: [],
+        #     3: [],
+        #     4: [],
+        #     5: [],
+        #     6: [],
+        #     7: [],
+        #     8: [],
+        #     9: [],
+        #     -98: [],
+        # }
+        self.active_workspace_id = None  # Track the last active workspace
         self.user_tiled_windows = []
-        self.previous_workspace_id = None  # Track the last active workspace
-
         
         self.monitors = self.db.get('monitors') or {}
         self.terminals = self.db.get('terminal_classes') or []
         self.ignore_titles = self.db.get('ignore_titles', []) or []
+        # To be implemented to get from config file
+        self.ignore_special_workspaces = False 
+
+        self.ignore_next_float_event_counter = 0
+        self.in_special_workspace = False
+        self.special_workspace_id = -98
 
 
     def handle_open_window(self, event_data):
@@ -294,18 +304,18 @@ class Hyprfloat:
             workspace_windows = [c for c in clients if c['workspace']['id'] == workspace_id]
             
             # If workspace or focusedmon event, check if the previous workspace needs updating
-            if event_type in ('workspacev2', 'focusedmon') and self.previous_workspace_id is not None:
-                if self.previous_workspace_id != workspace_id:
+            if event_type in ('workspacev2', 'focusedmon') and self.active_workspace_id is not None:
+                if self.active_workspace_id != workspace_id:
                     # Check the previous workspace
-                    previous_workspace_windows = [c for c in clients if c['workspace']['id'] == self.previous_workspace_id]
+                    previous_workspace_windows = [c for c in clients if c['workspace']['id'] == self.active_workspace_id]
                     if previous_workspace_windows:
                         workspaces = json.loads(hyprctl(['workspaces', '-j']).stdout)
-                        previous_workspace = next((w for w in workspaces if w['id'] == self.previous_workspace_id), None)
+                        previous_workspace = next((w for w in workspaces if w['id'] == self.active_workspace_id), None)
                         if previous_workspace:
                             self.handle_change(previous_workspace_windows, previous_workspace['monitor'], (event_type, event_data))
             
             # Update the tracked workspace
-            self.previous_workspace_id = workspace_id
+            self.active_workspace_id = workspace_id
 
         # Handle the event.
         if event_type == 'openwindow':
@@ -325,11 +335,21 @@ class Hyprfloat:
     def change_floating_handler(self, event):
         window_address = "0x" + event[1]
         is_floated = int(event[2])
-        if not is_floated:
+        if not is_floated:            
             self.user_tiled_windows.append(window_address)
+
         elif is_floated:
             if window_address in self.user_tiled_windows:
                 self.user_tiled_windows.remove(window_address)
+
+    def make_windows_normal(self, windows):
+        for window in windows:
+            address = window['address']
+            if window['floating']:
+                hyprctl(['dispatch', f'hl.dsp.window.float{{action = "disable", window = "address:{address}"}}'])
+                self.ignore_next_float_event_counter += 1
+
+
     def floation_manager(self, windows):
         if len(windows) == 1:
             window = windows[0]
@@ -337,30 +357,58 @@ class Hyprfloat:
             if ( window["class"] in self.terminals and
                  not window['title'] in self.ignore_titles and
                  not window_address in self.user_tiled_windows ):
+
                 format_window(window)
+
+            elif window["title"] in self.ignore_titles:
+                self.make_windows_normal([window])
+
         else:
             windows = [sanitize_window(window) for window in windows]
-            make_windows_normal(windows)
+            self.make_windows_normal(windows)
+
+            # SOLVED IN ANOTHER WAY DONT LISTEN
+            # Solves when a window is floating and another window opens the floating window 
+            # unfloats and mistakenly stored as user_tiled_window
+            # So it deletes user tiled windows in workspace when more than one app is present
+            
 
     def custom_handler(self, event):
         event_type = event[0]
-        IMP = ["workspacev2", "openwindow", "closewindow"]
+        IMP = ["workspacev2", "openwindow", "closewindow", "windowtitlev2"]
         if event_type in IMP:
-            active_workspace_id = hyprctl(['activeworkspace'])['id']
-            self.floation_manager(query_workspace(active_workspace_id))
+            
+            if self.in_special_workspace: active_workspace_id = self.special_workspace_id
+            else: active_workspace_id = hyprctl(['activeworkspace'])['id']
+            windows = query_workspace(active_workspace_id)
+            self.floation_manager(windows)
 
             if event_type == "closewindow":
-                window_address = "0x" + event[1]
-                if window_address in self.user_tiled_windows: self.user_tiled_windows.remove(window_address)
-
+                for window in windows:
+                    if window['address'] in self.user_tiled_windows:
+                        self.user_tiled_windows.remove(window['address'])
+                        self.floation_manager(windows)
+                    
 
         elif event_type == "changefloatingmode":
-            self.change_floating_handler(event)
-        
+            if self.ignore_next_float_event_counter: self.ignore_next_float_event_counter -= False
 
+            else: self.change_floating_handler(event)
+
+        elif event_type == "activespecialv2" and not self.ignore_special_workspaces:
+            special_workspace_id = event[1]
+            if special_workspace_id:
+                special_workspace_id = int(special_workspace_id)
+                self.in_special_workspace = True
+                self.special_workspace_id = special_workspace_id
+                windows = query_workspace(special_workspace_id)
+                self.floation_manager(windows)
+            else:
+                self.in_special_workspace = False
 
     def iterate_events(self, events):
         for event in events:
+            print(self.user_tiled_windows)
             self.custom_handler(event)
 
 def main():
