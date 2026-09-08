@@ -55,8 +55,7 @@ def format_window(window, size: tuple(int, int), offset: tuple(int)) -> None:
 
 
     # Offset the window if needed.
-    if offset[0] != 0 and offset[1] != 0:
-        hyprctl(['dispatch', f'hl.dsp.window.move({{x= {offset[0]}, y = {offset[1]}, window = "address:{address}"}})'])
+    hyprctl(['dispatch', f'hl.dsp.window.move({{x= {offset[0]}, y = {offset[1]}, window = "address:{address}", relative = true}})'])
     # hl.dsp.window.move({ x, y, relative?, window? })
 
 
