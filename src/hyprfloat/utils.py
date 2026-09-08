@@ -34,14 +34,14 @@ def format_window(window, size: tuple(int, int), offset: tuple(int)) -> None:
         hyprctl(['dispatch', f'hl.dsp.window.float{{action = "enable", window = "address:{address}"}}'])
         # 'hl.dsp.window.float{ action = "enable", window = "address:0x559896e6cd30" }'
         # hl.dsp.window.float({ action = "toggle" }))
-        
+
     # Broke newly opened apps
     # else:
     #     # Needed because for some reason when an already floating but not centered window is 
     #     # moved to another workspace its not centered for some reason 
     #     hyprctl(['dispatch', f'hl.dsp.window.float{{action = "disable", window = "address:{address}"}}'])
     #     hyprctl(['dispatch', f'hl.dsp.window.float{{action = "enable", window = "address:{address}"}}'])
-
+    # Turns out to be that the center command was not implemented correctly
 
 
     # Resize the window
@@ -50,12 +50,13 @@ def format_window(window, size: tuple(int, int), offset: tuple(int)) -> None:
     # hyprctl dispatch 'hl.dsp.window.resize({ x = 500, y = 400, window = "address:0x559896e6c3b0" })'
 
     # Center the window
-    hyprctl(['dispatch', f'gl.dsp.window.center({{"address:{address}"}})'])
+    hyprctl(['dispatch', f'hl.dsp.window.center({{window = "address:{address}"}})'])
     # hl.dsp.window.center({ "address:0x00" })
 
 
     # Offset the window if needed.
-    hyprctl(['dispatch', f'hl.dsp.window.move({{x= {offset[0]}, y = {offset[1]}, window = "address:{address}}})'])
+    if offset[0] != 0 and offset[1] != 0:
+        hyprctl(['dispatch', f'hl.dsp.window.move({{x= {offset[0]}, y = {offset[1]}, window = "address:{address}"}})'])
     # hl.dsp.window.move({ x, y, relative?, window? })
 
 
