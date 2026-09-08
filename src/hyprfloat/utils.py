@@ -34,11 +34,13 @@ def format_window(window, size: tuple(int, int), offset: tuple(int)) -> None:
         hyprctl(['dispatch', f'hl.dsp.window.float{{action = "enable", window = "address:{address}"}}'])
         # 'hl.dsp.window.float{ action = "enable", window = "address:0x559896e6cd30" }'
         # hl.dsp.window.float({ action = "toggle" }))
-    else:
-        # Needed because for some reason when an already floating but not centered window is 
-        # moved to another workspace its not centered for some reason 
-        hyprctl(['dispatch', f'hl.dsp.window.float{{action = "disable", window = "address:{address}"}}'])
-        hyprctl(['dispatch', f'hl.dsp.window.float{{action = "enable", window = "address:{address}"}}'])
+        
+    # Broke newly opened apps
+    # else:
+    #     # Needed because for some reason when an already floating but not centered window is 
+    #     # moved to another workspace its not centered for some reason 
+    #     hyprctl(['dispatch', f'hl.dsp.window.float{{action = "disable", window = "address:{address}"}}'])
+    #     hyprctl(['dispatch', f'hl.dsp.window.float{{action = "enable", window = "address:{address}"}}'])
 
 
 
