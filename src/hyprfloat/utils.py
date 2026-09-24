@@ -1,8 +1,9 @@
 import subprocess
 import json
-from .globals import IMPORTANT_EVENTS
+from .globals import IMPORTANT_EVENTS, KEYS_TO_KEEP
 
 def hyprctl(cmd):
+    
     """A wrapper for the hyprctl command"""
 
     return_value = subprocess.run(['hyprctl'] + cmd + ["-j"], capture_output = True, text = True)
@@ -19,9 +20,9 @@ def event_parser(events):
     events_list = []
     for event in events:
         event_name, event_args = event.split('>>')
-        if event_name in IMPORTANT_EVENTS:
-            event_args_list = event_args.split(',')
-            events_list.append([event_name, *event_args_list])
+        # if event_name in IMPORTANT_EVENTS:
+        event_args_list = event_args.split(',')
+        events_list.append([event_name, *event_args_list])
     return events_list
 
 def format_window(window, size: tuple(int, int), offset: tuple(int)) -> None:
@@ -66,7 +67,7 @@ def query_workspace(id, sanitize_windows: bool = True):
     active_clients_list = []
 
     # Exits if there is no windows
-    if not clients: return
+    if not clients: return []
 
     for client in clients:
         if client['workspace']['id'] == id:
@@ -79,9 +80,8 @@ def query_workspace(id, sanitize_windows: bool = True):
 def sanitize_window(window: dict) -> dict:
     """Takes rid of unwanted values in window dictionaries"""
 
-    keys_to_keep = ["address", "workspace", "floating", "class", "title"]
     # Keep only keys that exist in the original dictionary
-    filtered_window_dict = {k: window[k] for k in keys_to_keep if k in window}
+    filtered_window_dict = {k: window[k] for k in KEYS_TO_KEEP if k in window}
 
     return filtered_window_dict
 
