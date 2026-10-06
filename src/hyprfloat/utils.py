@@ -19,7 +19,10 @@ def event_parser(events):
 
     events_list = []
     for event in events:
-        event_name, event_args = event.split('>>')
+        try: 
+            event_name, event_args = event.split('>>')
+        except ValueError:
+            return
         # if event_name in IMPORTANT_EVENTS:
         event_args_list = event_args.split(',')
         events_list.append([event_name, *event_args_list])

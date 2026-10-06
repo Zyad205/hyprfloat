@@ -29,6 +29,7 @@ class Hyprfloat:
             7: "",
             8: "",
             9: "",
+            10: "",
             -98: "",
         }
 
@@ -143,7 +144,12 @@ class Hyprfloat:
         elif event_type == "movewindowv2":
             moved_window_address = "0x" + event[1]
             new_workspace_id = int(event[2])
-            new_workspace_floated_terminal = self.program_floated_terminal[new_workspace_id]
+
+            if new_workspace_id in self.program_floated_terminal.keys():
+                new_workspace_floated_terminal = self.program_floated_terminal[new_workspace_id]
+            else: 
+                self.program_floated_terminal[new_workspace_id] = "" # Add the key for a workspace not in the list
+                new_workspace_floated_terminal = ""
 
             if new_workspace_floated_terminal != "":
                 self.make_windows_normal(new_workspace_id, [{"address": new_workspace_floated_terminal}])
