@@ -83,6 +83,11 @@ class Hyprfloat:
                         f'hl.dsp.window.float{{action = "disable", window = "address:{address}"}}'
                         ])
 
+                    hyprctl([
+                        'dispatch',
+                        f'hl.dsp.window.move({{window = "address:{address}", direction = "left"}})'
+                    ])
+
                     self.program_floated_terminal[workspace_id] = ""
 
                     self.program_tiled_windows.append(address)
@@ -135,10 +140,12 @@ class Hyprfloat:
             # Skips changefloatingmode events executed by the program
             if window_address in self.program_tiled_windows:
                 self.program_tiled_windows.remove(window_address)
+                
             else:
                 # Only stores the window as user_tiled_window when their is a singular
                 # Window
                 if len(windows) == 1 and not int(event[2]): # Actually floating
+                    self.program_floated_terminal[active_workspace_id] = ""
                     self.change_floating_handler(event)
 
         elif event_type == "movewindowv2":
